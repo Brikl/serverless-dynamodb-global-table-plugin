@@ -40,7 +40,42 @@ const deploy = (serverless, options) => {
                 .then(tap)
                 .then((uow) => {
                   serverless.cli.log(`Updated global table: ${uow.tableName} with region: ${options.region}`);
-                  return uow;
+                  
+                  // TODO use global table global scaling settings - add a new field or flag for that?
+                  if(options.setGlobalTableSetting===true){
+                    // as per https://docs.aws.amazon.com/cli/latest/reference/dynamodb/update-global-table-settings.html
+                    return serverless.getProvider('aws').request('DynamoDB', 'updateGlobalTableSettings', {
+                      GlobalTableName: uow.tableName,
+                      // [--global-table-provisioned-write-capacity-units <value>]
+                      // [--global-table-provisioned-write-capacity-auto-scaling-settings-update <value>]
+                      // {
+                      //   MinimumUnits: long,
+                      //   MaximumUnits: long,
+                      //   AutoScalingDisabled: true|false,
+                      //   AutoScalingRoleArn: "string",
+                      //   ScalingPolicyUpdate: {
+                      //     PolicyName: "string",
+                      //     TargetTrackingScalingPolicyConfiguration: {
+                      //       DisableScaleIn: true|false,
+                      //       ScaleInCooldown: integer,
+                      //       ScaleOutCooldown: integer,
+                      //       TargetValue: double
+                      //     }
+                      //   }
+                      // }
+                    })
+                      .then(data => ({ ...uow, ...data }))
+                      .then(tap)
+                      .then((uow) => {
+                        serverless.cli.log(`Updated global table: ${uow.tableName} with region: ${options.region}`);
+                        return uow
+                      })
+                  }else{
+                    return uow;
+                  }
+                  
+
+                  
                 });
               } else {
               return Promise.resolve(uow)
